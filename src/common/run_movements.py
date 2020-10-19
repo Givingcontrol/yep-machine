@@ -1,7 +1,7 @@
 import asyncio
-import pigpio
-import config
 
+import config
+import pigpio
 
 pi = pigpio.pi()
 pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
@@ -72,6 +72,8 @@ def tick_response(data):
 
 
 async def run_movements(data):
+    pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
+    pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
     ticker = tick_response(data)
     for reverse, tick in ticker:
         pi.write(config.DIRECTION_PIN, reverse)
