@@ -29,18 +29,16 @@ class Run:
     def __init__(self):
         self.locking_task = None
 
-    async def run_handler(self, message, status_ws):
+    async def run_handler(self, message, ws):
         data = message.get("data")
         if data:
-            await HANDLERS[message["type"]](status_ws, json.loads(data))
+            await HANDLERS[message["type"]](ws, json.loads(data))
         else:
-            await HANDLERS[message["type"]](status_ws)
+            await HANDLERS[message["type"]](ws)
 
     async def loop(self):
-        # status_ws = await websockets.connect(config.WS_URL + status.status)
-
         async with websockets.connect(
-            config.WS_URL + commands.command_all
+            config.WS_URL + commands.command_all, ping_interval=5
         ) as websocket:
             while True:
                 messages = await websocket.recv()

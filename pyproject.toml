@@ -10,6 +10,8 @@ gpiozero = "^1.5.1"
 asyncio = "^3.4.3"
 requests = "^2.24.0"
 websockets = "^8.1"
+pigpio = "^1.78"
+"RPi.GPIO" = "^0.7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^4.6"

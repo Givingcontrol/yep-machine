@@ -12,4 +12,3 @@ async def stop(status_ws):
     await status_ws.send(
         json.dumps(dict(stream=status.status, device="machine", type=status.waiting))
     )
-    print("SENT WAITING")
