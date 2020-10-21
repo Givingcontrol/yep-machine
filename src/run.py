@@ -1,5 +1,8 @@
 import asyncio
 import json
+
+from gpiozero import Button
+
 from commands.calibrate import calibrate
 from commands.loop_wave import loop_wave
 from commands.stop import stop
@@ -26,6 +29,8 @@ LOCKING_COMMANDS = (commands.loop_wave, commands.calibrate)
 
 loop_ = asyncio.new_event_loop()
 
+# front_limit = Button(21, pull_up=True)
+# back_limit = Button(20, pull_up=True)
 
 class Run:
     def __init__(self):
@@ -38,11 +43,15 @@ class Run:
                 await HANDLERS[message["type"]](pi, ws, json.loads(data))
             else:
                 await HANDLERS[message["type"]](pi, ws)
+        # todo: make custom exception, capture only it
         except Exception as exception:
             pi.set_mode(config.PULSE_PIN, pigpio.INPUT)
             pi.wave_tx_stop()
             pi.wave_clear()
             print("Command exception:", exception)
+
+    # def check_hardware(self):
+    #     if not front_limit.is_press
 
     async def loop(self):
         async with websockets.connect(

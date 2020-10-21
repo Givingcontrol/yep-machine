@@ -1,6 +1,6 @@
-MAX_FREQUENCY = 5000
+MAX_FREQUENCY = 50000
 # max allowed by pigpio without encountering "pigpio.error: 'too many chain counters'"
-POINTS_IN_WAVE = 20
+WAVE_RESOLUTION = 20.0  # number of frequency changes per second
 
 SERVER_URL = "10.0.0.2"
 

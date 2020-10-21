@@ -6,8 +6,8 @@ from gpiozero import Button
 import config
 from utils.wave import create_wave
 
-front_limit = Button(21)
-back_limit = Button(20)
+front_limit = Button(21, pull_up=True)
+back_limit = Button(20, pull_up=True)
 
 pi = pigpio.pi()
 
@@ -23,8 +23,8 @@ async def calibrate(pi, ws):
 
     # go to the back
     pi.write(config.DIRECTION_PIN, False)
-    while back_limit.is_pressed:
-        if not front_limit.is_pressed:
+    while not back_limit.is_pressed:
+        if front_limit.is_pressed:
             raise Exception("Wrong direction")
 
         await asyncio.sleep(0)
@@ -35,8 +35,8 @@ async def calibrate(pi, ws):
     # go to the front while counting steps
     pi.write(config.DIRECTION_PIN, True)
     steps_counter = 0
-    while front_limit.is_pressed:
-        if steps_counter > 10 and not back_limit.is_pressed:
+    while not front_limit.is_pressed:
+        if steps_counter > 10 and back_limit.is_pressed:
             raise Exception("Wrong direction")
 
         await asyncio.sleep(0)

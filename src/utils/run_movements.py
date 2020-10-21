@@ -6,29 +6,27 @@ import config
 from utils.wave import create_wave
 
 
-async def generate_ramp(pi, ramp):
+async def generate_ramp(pi, frequencies):
     pi.wave_clear()
-    ramp_len = len(ramp)
-    wave_id = [-1] * ramp_len
+    wave_ids = [-1] * len(frequencies)
 
-    # generate a wave per frequency
-    for i in range(ramp_len):
-        f = ramp[i][0]
-        if f == 0:
-            micros = 0
+    # generate wave period
+    for index, frequency in enumerate(frequencies):
+        if frequency == 0:
+            period = 0
         else:
-            micros = int(500000 / f)
+            period = 1 / frequency
+        wave_ids[index] = create_wave(pi, period)
 
-        wave_id[i] = create_wave(pi, micros)
-
-    # generate a chain of waves
+    # generate number of steps per frequency
     chain = []
-    for i in range(ramp_len):
-        steps = ramp[i][1]
-        x = steps & 255
-        y = steps >> 8
+    for index, frequency in enumerate(frequencies):
+        # todo: investigate timing, not quite per second, more like per 1.5 seconds
+        steps_number = int(frequency / config.WAVE_RESOLUTION)
+        steps_number_below_256 = steps_number & 255
+        steps_number_times_256 = steps_number >> 8
 
-        chain += [255, 0, wave_id[i], 255, 1, x, y]
+        chain += [255, 0, wave_ids[index], 255, 1, steps_number_below_256, steps_number_times_256]
 
     pi.wave_chain(chain)  # Transmit chain.
 
@@ -36,8 +34,8 @@ async def generate_ramp(pi, ramp):
         await asyncio.sleep(0.01)
 
     # delete all waves
-    for i in range(ramp_len):
-        pi.wave_delete(wave_id[i])
+    for index in range(len(wave_ids)):
+        pi.wave_delete(index)
 
 
 def tick_response(data):
@@ -58,7 +56,7 @@ def tick_response(data):
         else:
             batch.append(point)
             batch_counter += 1
-            if batch_counter == 19:
+            if batch_counter == 19:  # pigpio doesn't accept more than 20 waves per chain
                 yield point_reverse, batch
                 batch = []
                 batch_counter = 0
@@ -70,13 +68,12 @@ async def run_movements(pi, data):
     pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
     pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
     ticker = tick_response(data)
-    for reverse, tick in ticker:
+
+    for reverse, moves in ticker:
         pi.write(config.DIRECTION_PIN, reverse)
-        group = []
-        for point in tick:
-            frequency = abs(int(point * config.MAX_FREQUENCY))
-            group.append([frequency, int(frequency / config.POINTS_IN_WAVE)])
-        await generate_ramp(pi, group)
+        # convert from fractional moves to frequencies relative to max frequency
+        frequencies = [abs(int(move * config.MAX_FREQUENCY)) for move in moves]
+        await generate_ramp(pi, frequencies)
 
         pi.wave_tx_stop()  # stop waveform
         pi.wave_clear()
