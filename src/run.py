@@ -4,15 +4,17 @@ from commands.calibrate import calibrate
 from commands.loop_wave import loop_wave
 from commands.stop import stop
 
+import pigpio
 import websockets
 
 import config
-import pigpio
 from streams import commands
 
 pi = pigpio.pi()
 pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
 pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
+pi.wave_tx_stop()
+pi.wave_clear()
 
 HANDLERS = {
     commands.stop: stop,
@@ -30,11 +32,17 @@ class Run:
         self.locking_task = None
 
     async def run_handler(self, message, ws):
-        data = message.get("data")
-        if data:
-            await HANDLERS[message["type"]](ws, json.loads(data))
-        else:
-            await HANDLERS[message["type"]](ws)
+        try:
+            data = message.get("data")
+            if data:
+                await HANDLERS[message["type"]](pi, ws, json.loads(data))
+            else:
+                await HANDLERS[message["type"]](pi, ws)
+        except Exception as exception:
+            pi.set_mode(config.PULSE_PIN, pigpio.INPUT)
+            pi.wave_tx_stop()
+            pi.wave_clear()
+            print("Command exception:", exception)
 
     async def loop(self):
         async with websockets.connect(

@@ -1,14 +1,12 @@
 import asyncio
 
-import config
 import pigpio
 
-pi = pigpio.pi()
-pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
-pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
+import config
+from utils.wave import create_wave
 
 
-async def generate_ramp(ramp):
+async def generate_ramp(pi, ramp):
     pi.wave_clear()
     ramp_len = len(ramp)
     wave_id = [-1] * ramp_len
@@ -20,11 +18,8 @@ async def generate_ramp(ramp):
             micros = 0
         else:
             micros = int(500000 / f)
-        wave = []
-        wave.append(pigpio.pulse(1 << config.PULSE_PIN, 0, micros))
-        wave.append(pigpio.pulse(0, 1 << config.PULSE_PIN, micros))
-        pi.wave_add_generic(wave)
-        wave_id[i] = pi.wave_create()
+
+        wave_id[i] = create_wave(pi, micros)
 
     # generate a chain of waves
     chain = []
@@ -71,7 +66,7 @@ def tick_response(data):
     yield reverse, batch
 
 
-async def run_movements(data):
+async def run_movements(pi, data):
     pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
     pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
     ticker = tick_response(data)
@@ -81,7 +76,7 @@ async def run_movements(data):
         for point in tick:
             frequency = abs(int(point * config.MAX_FREQUENCY))
             group.append([frequency, int(frequency / config.POINTS_IN_WAVE)])
-        await generate_ramp(group)
+        await generate_ramp(pi, group)
 
         pi.wave_tx_stop()  # stop waveform
         pi.wave_clear()
