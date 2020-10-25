@@ -6,12 +6,14 @@ import config
 from utils.wave import create_wave
 
 
-async def generate_ramp(pi, frequencies):
+async def generate_ramp(pi, steps):
     pi.wave_clear()
-    wave_ids = [-1] * len(frequencies)
+    wave_ids = [-1] * len(steps)
 
     # generate wave period
-    for index, frequency in enumerate(frequencies):
+    for index, step in enumerate(steps):
+        # todo: fix timing, not quite per second, more like per 1.5 seconds
+        frequency = step * config.WAVE_RESOLUTION * 2
         if frequency == 0:
             period = 0
         else:
@@ -20,11 +22,9 @@ async def generate_ramp(pi, frequencies):
 
     # generate number of steps per frequency
     chain = []
-    for index, frequency in enumerate(frequencies):
-        # todo: investigate timing, not quite per second, more like per 1.5 seconds
-        steps_number = int(frequency / config.WAVE_RESOLUTION)
-        steps_number_below_256 = steps_number & 255
-        steps_number_times_256 = steps_number >> 8
+    for index, step in enumerate(steps):
+        steps_number_below_256 = step & 255
+        steps_number_times_256 = step >> 8
 
         chain += [255, 0, wave_ids[index], 255, 1, steps_number_below_256, steps_number_times_256]
 
@@ -71,9 +71,9 @@ async def run_movements(pi, data):
 
     for reverse, moves in ticker:
         pi.write(config.DIRECTION_PIN, reverse)
-        # convert from fractional moves to frequencies relative to max frequency
-        frequencies = [abs(int(move * config.MAX_FREQUENCY)) for move in moves]
-        await generate_ramp(pi, frequencies)
+        # todo: raise exception instead of silently correcting movement value with max
+        steps = [int(min(abs(move), 1) * config.MAX_STEPS) for move in moves]
+        await generate_ramp(pi, steps)
 
         pi.wave_tx_stop()  # stop waveform
         pi.wave_clear()

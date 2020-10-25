@@ -1,61 +1,47 @@
 import asyncio
 import json
 
-from gpiozero import Button
-
-from commands.calibrate import calibrate
-from commands.loop_wave import loop_wave
-from commands.stop import stop
+from commands.calibrate import Calibrate
+from commands.loop_wave import LoopWave
+from commands.stop import Stop
 
 import pigpio
 import websockets
 
 import config
+from hardware import Hardware
 from streams import commands
-
-pi = pigpio.pi()
-pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
-pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
-pi.wave_tx_stop()
-pi.wave_clear()
+from utils.exceptions import Malfunction
 
 HANDLERS = {
-    commands.stop: stop,
-    commands.calibrate: calibrate,
-    commands.loop_wave: loop_wave,
+    commands.stop: Stop,
+    commands.calibrate: Calibrate,
+    commands.loop_wave: LoopWave,
 }
 
 LOCKING_COMMANDS = (commands.loop_wave, commands.calibrate)
 
-loop_ = asyncio.new_event_loop()
-
-# front_limit = Button(21, pull_up=True)
-# back_limit = Button(20, pull_up=True)
 
 class Run:
     def __init__(self):
         self.locking_task = None
+        self.hardware = Hardware()
+        self.pi = self.hardware.pi
 
     async def run_handler(self, message, ws):
         try:
             data = message.get("data")
+            handler = HANDLERS[message["type"]](self.hardware, ws)
             if data:
-                await HANDLERS[message["type"]](pi, ws, json.loads(data))
+                await handler.run(json.loads(data))
             else:
-                await HANDLERS[message["type"]](pi, ws)
-        # todo: make custom exception, capture only it
-        except Exception as exception:
-            pi.set_mode(config.PULSE_PIN, pigpio.INPUT)
-            pi.wave_tx_stop()
-            pi.wave_clear()
-            print("Command exception:", exception)
-
-    # def check_hardware(self):
-    #     if not front_limit.is_press
+                await handler.run()
+        except Malfunction as exception:
+            self.hardware.reset(exception)
 
     async def loop(self):
         async with websockets.connect(
-            config.WS_URL + commands.command_all, ping_interval=5
+                config.WS_URL + commands.command_all, ping_interval=5
         ) as websocket:
             while True:
                 messages = await websocket.recv()
@@ -72,11 +58,10 @@ class Run:
                         if self.locking_task:
                             self.locking_task.cancel()
                         self.locking_task = task
-                        pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
-                        pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
+                        self.pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
+                        self.pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
 
 
 runner = Run()
 
 asyncio.get_event_loop().run_until_complete(runner.loop())
-pi.stop()

@@ -1,0 +1,2 @@
+class Malfunction(Exception):
+    pass
