@@ -11,7 +11,7 @@ import websockets
 import config
 from hardware import Hardware
 from streams import commands
-from utils.exceptions import Malfunction
+from exceptions import Malfunction
 
 HANDLERS = {
     commands.stop: Stop,

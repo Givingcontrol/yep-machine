@@ -1,8 +1,8 @@
 import json
 
 from streams import status
-from utils.exceptions import Malfunction
-from utils.run_movements import run_movements
+from exceptions import Malfunction
+from utils import Utils
 
 
 class LoopWave:
@@ -10,6 +10,7 @@ class LoopWave:
         self.hardware = hardware
         self.pi = hardware.pi
         self.ws = ws
+        self.utils = Utils(hardware)
 
     async def run(self, data):
         # todo: measure and log one loop execution time
@@ -22,4 +23,4 @@ class LoopWave:
             raise Malfunction('Limit switch pressed at the start of loop_wave')
 
         while True:
-            await run_movements(self.pi, data)
+            await self.utils.run_moves(data)
