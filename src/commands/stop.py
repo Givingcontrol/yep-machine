@@ -15,5 +15,7 @@ class Stop:
     async def run(self):
         self.pi.set_mode(config.PULSE_PIN, pigpio.INPUT)
         await self.ws.send(
-            json.dumps(dict(stream=status.status, device="machine", type=status.waiting))
+            json.dumps(
+                dict(stream=status.status, device="machine", type=status.waiting)
+            )
         )

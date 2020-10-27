@@ -1,9 +1,9 @@
 import asyncio
 import json
-
 from commands.calibrate import Calibrate
 from commands.loop_wave import LoopWave
 from commands.stop import Stop
+from exceptions import Malfunction
 
 import pigpio
 import websockets
@@ -11,7 +11,6 @@ import websockets
 import config
 from hardware import Hardware
 from streams import commands
-from exceptions import Malfunction
 
 HANDLERS = {
     commands.stop: Stop,
@@ -41,7 +40,7 @@ class Run:
 
     async def loop(self):
         async with websockets.connect(
-                config.WS_URL + commands.command_all, ping_interval=5
+            config.WS_URL + commands.command_all, ping_interval=5
         ) as websocket:
             while True:
                 messages = await websocket.recv()

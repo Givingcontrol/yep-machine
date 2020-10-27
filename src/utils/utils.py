@@ -21,7 +21,9 @@ class Utils(RunMoves):
         self.pi.wave_add_generic(wave)
         return self.pi.wave_create()
 
-    async def move(self, steps):
+    async def move(self, steps, reverse):
+        self.pi.write(config.DIRECTION_PIN, reverse)
+
         self.pi.wave_clear()
         wave_id = self.create_wave(0.0005)
 
@@ -29,8 +31,15 @@ class Utils(RunMoves):
         steps_number_below_256 = steps & 255
         steps_number_times_256 = steps >> 8
 
-        chain = [255, 0, wave_id, 255, 1, steps_number_below_256,
-                 steps_number_times_256]
+        chain = [
+            255,
+            0,
+            wave_id,
+            255,
+            1,
+            steps_number_below_256,
+            steps_number_times_256,
+        ]
 
         self.pi.wave_chain(chain)  # Transmit chain.
 

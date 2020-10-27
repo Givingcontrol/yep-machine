@@ -1,11 +1,11 @@
 import asyncio
 import json
+from exceptions import Malfunction
 
 import pigpio
 
 import config
 from streams import status
-from exceptions import Malfunction
 from utils import Utils
 
 
@@ -54,12 +54,11 @@ class Calibrate:
                 steps_counter += 1
                 self.pi.wave_send_using_mode(backward_wave, pigpio.WAVE_MODE_ONE_SHOT)
 
-        self.pi.write(config.DIRECTION_PIN, True)
         # todo: set position to 0 on first step after releasing, move steps from there
-        await self.utils.move(config.PADDING_STEPS)
+        await self.utils.move(config.PADDING_STEPS, True)
 
         self.hardware.position = 0
-        self.hardware.max_position = steps_counter - config.PADDING_STEPS
+        self.hardware.max_position = steps_counter - config.PADDING_STEPS * 2
 
         self.pi.wave_tx_stop()
         self.pi.wave_clear()

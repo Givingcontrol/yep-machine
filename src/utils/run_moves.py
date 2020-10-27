@@ -31,8 +31,15 @@ class RunMoves:
             steps_number_below_256 = step & 255
             steps_number_times_256 = step >> 8
 
-            chain += [255, 0, wave_ids[index], 255, 1, steps_number_below_256,
-                      steps_number_times_256]
+            chain += [
+                255,
+                0,
+                wave_ids[index],
+                255,
+                1,
+                steps_number_below_256,
+                steps_number_times_256,
+            ]
 
         self.pi.wave_chain(chain)  # Transmit chain.
 
@@ -51,8 +58,15 @@ class RunMoves:
             # todo: implement configurable reverse to front mapping
             self.pi.write(config.DIRECTION_PIN, not reverse)
             # todo: raise exception instead of silently correcting movement value with max
-            steps = [int(min(abs(move), 1) * self.hardware.max_position / 2) for move in moves]
+            # todo: save decimal point of the step and add it when it exceeds 0.5 -
+            # - to minimize backwards-forwards compensation needed
+            steps = [
+                int(min(abs(move), 1) * self.hardware.max_position / 2)
+                for move in moves
+            ]
             await self._generate_ramp(steps)
+
+            self.hardware.log_steps(abs(sum(steps)), reverse)
 
             self.pi.wave_tx_stop()  # stop waveform
             self.pi.wave_clear()
@@ -76,7 +90,9 @@ def tick_response(data):
         else:
             batch.append(point)
             batch_counter += 1
-            if batch_counter == 19:  # pigpio doesn't accept more than 20 waves per chain
+            if (
+                batch_counter == 19
+            ):  # pigpio doesn't accept more than 20 waves per chain
                 yield point_reverse, batch
                 batch = []
                 batch_counter = 0
