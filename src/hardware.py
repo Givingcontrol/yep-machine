@@ -35,6 +35,8 @@ class Hardware:
         self.pi.set_mode(config.PULSE_PIN, pigpio.INPUT)
         self.pi.wave_tx_stop()
         self.pi.wave_clear()
+        self.reverse_steps = 0
+        self.forward_steps = 0
 
     def enable_limit_monitoring(self):
         self.front_limit.when_pressed = lambda: self.reset("Front limit switch pressed")
@@ -52,12 +54,15 @@ class Hardware:
         pass
 
     def log_steps(self, steps, reverse):
+        print('log', steps, reverse)
         if reverse:
             self.reverse_steps += steps
         else:
             self.forward_steps += steps
 
     async def compensate_for_steps(self):
+        print(self.forward_steps)
+        print(self.reverse_steps)
         steps = abs(self.forward_steps - self.reverse_steps)
         print(f"Compensating for {steps} steps")
         await self.utils.move(steps, self.reverse_steps > self.forward_steps)
