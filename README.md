@@ -1,6 +1,6 @@
-# Yep machine
+# Yep Machine
 
-Smart fucking machine (in progress) [video](https://twitter.com/yepdev_/status/1321421143283294208)
+Smart fucking machine [video](https://twitter.com/yepdev_/status/1321421143283294208)
 
 ## Project features
 
