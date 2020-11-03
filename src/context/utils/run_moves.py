@@ -6,10 +6,11 @@ import config
 
 
 class RunMoves:
-    def __init__(self, utils, hardware):
+    def __init__(self, utils, hardware, settings):
         self.hardware = hardware
         self.pi = hardware.pi
         self.utils = utils
+        self.settings = settings
 
     async def _generate_ramp(self, steps):
         self.pi.wave_clear()
@@ -18,7 +19,7 @@ class RunMoves:
         # generate wave period
         for index, step in enumerate(steps):
             # todo: fix timing, not quite per second, more like per 1.5 seconds
-            frequency = step * config.WAVE_RESOLUTION * 2
+            frequency = step * self.settings.wave_resolution * 2
             if frequency == 0:
                 period = 0
             else:
@@ -53,7 +54,9 @@ class RunMoves:
     async def run_moves(self, data):
         self.pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
         self.pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
+
         ticker = tick_response(data)
+
         for reverse, moves in ticker:
             # todo: implement configurable reverse to front mapping
             self.pi.write(config.DIRECTION_PIN, not reverse)
@@ -61,8 +64,7 @@ class RunMoves:
             # todo: save decimal point of the step and add it when it exceeds 0.5 -
             # - to minimize backwards-forwards compensation needed
             steps = [
-                int(min(abs(move), 1) * self.hardware.max_position / 2)
-                for move in moves
+                int(min(abs(move), 1) * self.settings.max_steps / 2) for move in moves
             ]
             await self._generate_ramp(steps)
 

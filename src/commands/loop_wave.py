@@ -1,16 +1,16 @@
 import json
 from exceptions import Malfunction
 
+from context.utils import Utils
 from streams import status
-from utils import Utils
 
 
 class LoopWave:
-    def __init__(self, hardware, ws):
-        self.hardware = hardware
-        self.pi = hardware.pi
-        self.ws = ws
-        self.utils = Utils(hardware)
+    def __init__(self, context):
+        self.hardware = context.hardware
+        self.pi = context.pi
+        self.ws = context.ws
+        self.utils = context.utils
 
     async def run(self, data):
         # todo: measure and log one loop execution time
@@ -24,4 +24,4 @@ class LoopWave:
 
         while True:
             await self.utils.run_moves(data)
-            await self.hardware.compensate_for_steps()
+            await self.utils.compensate_for_steps()

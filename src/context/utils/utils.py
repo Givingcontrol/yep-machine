@@ -3,14 +3,14 @@ import asyncio
 import pigpio
 
 import config
-from utils.run_moves import RunMoves
+from context.utils.run_moves import RunMoves
 
 
 class Utils(RunMoves):
-    def __init__(self, hardware):
+    def __init__(self, hardware, settings):
         self.hardware = hardware
         self.pi = hardware.pi
-        super(Utils, self).__init__(self, hardware)
+        super(Utils, self).__init__(self, hardware, settings)
 
     def create_wave(self, period):
         period = int(period * 1000000)  # convert s to ns
@@ -48,3 +48,12 @@ class Utils(RunMoves):
 
         # delete all waves
         self.pi.wave_delete(0)
+
+    async def compensate_for_steps(self):
+        steps = abs(self.hardware.forward_steps - self.hardware.reverse_steps)
+        print(f"Compensating for {steps} steps")
+        await self.utils.move(
+            steps, self.hardware.reverse_steps > self.hardware.forward_steps
+        )
+        self.hardware.reverse_steps = 0
+        self.hardware.forward_steps = 0

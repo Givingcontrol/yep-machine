@@ -2,13 +2,12 @@ import pigpio
 from gpiozero import Button
 
 import config
-from utils import Utils
+from context.utils import Utils
 
 
 class Hardware:
     def __init__(self):
         self.pi = pigpio.pi()
-        self.utils = Utils(self)
 
         self.pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
         self.pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
@@ -19,7 +18,6 @@ class Hardware:
         self.back_limit = Button(20)
 
         self.position = None
-        self.max_position = None
 
         self.forward_steps = 0
         self.reverse_steps = 0
@@ -54,17 +52,7 @@ class Hardware:
         pass
 
     def log_steps(self, steps, reverse):
-        print('log', steps, reverse)
         if reverse:
             self.reverse_steps += steps
         else:
             self.forward_steps += steps
-
-    async def compensate_for_steps(self):
-        print(self.forward_steps)
-        print(self.reverse_steps)
-        steps = abs(self.forward_steps - self.reverse_steps)
-        print(f"Compensating for {steps} steps")
-        await self.utils.move(steps, self.reverse_steps > self.forward_steps)
-        self.reverse_steps = 0
-        self.forward_steps = 0

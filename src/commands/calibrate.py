@@ -3,18 +3,20 @@ import json
 from exceptions import Malfunction
 
 import pigpio
+import requests
 
 import config
+from context.utils import Utils
 from streams import status
-from utils import Utils
 
 
 class Calibrate:
-    def __init__(self, hardware, ws):
-        self.hardware = hardware
-        self.pi = hardware.pi
-        self.ws = ws
-        self.utils = Utils(hardware)
+    def __init__(self, context):
+        self.hardware = context.hardware
+        self.pi = context.pi
+        self.ws = context.ws
+        self.utils = context.utils
+        self.settings = context.settings
 
     async def run(self):
         self.hardware.disable_limit_monitoring()
@@ -40,8 +42,8 @@ class Calibrate:
                 # todo: check why WAVE_MODE_ONE_SHOT_SYNC queues too many waves that keep running
                 self.pi.wave_send_using_mode(forward_wave, pigpio.WAVE_MODE_ONE_SHOT)
 
-        # go to the front while counting steps
         # todo: count since switch release instead of press, slow moves until release
+        # go to the back while counting steps
         backward_wave = self.utils.create_wave(0.0004)
         self.pi.write(config.DIRECTION_PIN, False)
         steps_counter = 0
@@ -54,11 +56,14 @@ class Calibrate:
                 steps_counter += 1
                 self.pi.wave_send_using_mode(backward_wave, pigpio.WAVE_MODE_ONE_SHOT)
 
-        # todo: set position to 0 on first step after releasing, move steps from there
-        await self.utils.move(config.PADDING_STEPS, True)
+        await self.utils.move(self.settings.padding_steps, True)
 
         self.hardware.position = 0
-        self.hardware.max_position = steps_counter - config.PADDING_STEPS * 2
+        response = requests.put(
+            f"{config.API_URL}settings/machine-thrust/1",
+            json.dumps({"max_steps": steps_counter - self.settings.padding_steps * 2}),
+        )
+        self.settings.set_settings(response.json())
 
         self.pi.wave_tx_stop()
         self.pi.wave_clear()

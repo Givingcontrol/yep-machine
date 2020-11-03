@@ -9,7 +9,8 @@ import pigpio
 import websockets
 
 import config
-from hardware import Hardware
+from context.context import Context
+from context.hardware import Hardware
 from streams import commands
 
 HANDLERS = {
@@ -23,14 +24,17 @@ LOCKING_COMMANDS = (commands.loop_wave, commands.calibrate)
 
 class Run:
     def __init__(self):
-        self.locking_task = None
-        self.hardware = Hardware()
-        self.pi = self.hardware.pi
+        self.context = Context()
+        self.hardware = self.context.hardware
+        self.pi = self.context.pi
+        self.settings = self.context.settings
 
-    async def run_handler(self, message, ws):
+        self.locking_task = None
+
+    async def run_handler(self, message):
         try:
             data = message.get("data")
-            handler = HANDLERS[message["type"]](self.hardware, ws)
+            handler = HANDLERS[message["type"]](self.context)
             if data:
                 await handler.run(json.loads(data))
             else:
@@ -42,6 +46,7 @@ class Run:
         async with websockets.connect(
             config.WS_URL + commands.command_all, ping_interval=5
         ) as websocket:
+            self.context.ws = websocket
             while True:
                 messages = await websocket.recv()
                 messages = json.loads(messages)
@@ -51,7 +56,7 @@ class Run:
                     if message_type == "stop" and self.locking_task:
                         self.locking_task.cancel()
 
-                    task = asyncio.create_task(self.run_handler(message, websocket))
+                    task = asyncio.create_task(self.run_handler(message))
 
                     if message_type in LOCKING_COMMANDS:
                         if self.locking_task:
