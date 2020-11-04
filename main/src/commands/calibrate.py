@@ -6,7 +6,6 @@ import pigpio
 import requests
 
 import config
-from context.utils import Utils
 from streams import status
 
 

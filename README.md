@@ -26,6 +26,12 @@ This is just Raspberry Pi code, it needs other modules to function:
 
 ![architecture](https://github.com/yep-dev/yep-machine/blob/master/docs/architecture.png?raw=true)
 
+## Installation
+
+- *Disable remote GPIO*
+- Install docker and docker-compose
+
+
 ## Hardware
 
 ![architecture](https://github.com/yep-dev/yep-machine/blob/master/docs/hardware.png?raw=true)

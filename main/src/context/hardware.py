@@ -2,7 +2,6 @@ import pigpio
 from gpiozero import Button
 
 import config
-from context.utils import Utils
 
 
 class Hardware:

@@ -1,7 +1,6 @@
 import json
 from exceptions import Malfunction
 
-from context.utils import Utils
 from streams import status
 
 

@@ -1,5 +1,7 @@
 import asyncio
 import json
+import time
+
 from commands.calibrate import Calibrate
 from commands.loop_wave import LoopWave
 from commands.stop import Stop
@@ -10,7 +12,6 @@ import websockets
 
 import config
 from context.context import Context
-from context.hardware import Hardware
 from streams import commands
 
 HANDLERS = {
@@ -32,6 +33,9 @@ class Run:
         self.locking_task = None
 
     async def run_handler(self, message):
+        message_time = message['time']
+        print(message_time)
+        print((time.time() - float(message_time)) * 1000, 'ms delay')
         try:
             data = message.get("data")
             handler = HANDLERS[message["type"]](self.context)
@@ -44,7 +48,7 @@ class Run:
 
     async def loop(self):
         async with websockets.connect(
-            config.WS_URL + commands.command_all, ping_interval=5
+                config.WS_URL + commands.command_all, ping_interval=5
         ) as websocket:
             self.context.ws = websocket
             while True:
