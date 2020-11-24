@@ -30,7 +30,7 @@ class Calibrate:
         self.pi.wave_clear()
 
         # go to the front
-        forward_wave = self.utils.create_wave(0.0005)
+        forward_wave = self.utils.create_wave(0.00005)
         self.pi.write(config.DIRECTION_PIN, True)
         while not self.hardware.front_limit.is_pressed:
             if self.hardware.back_limit.is_pressed:
@@ -43,16 +43,16 @@ class Calibrate:
 
         # todo: count since switch release instead of press, slow moves until release
         # go to the back while counting steps
-        backward_wave = self.utils.create_wave(0.0004)
+        backward_wave = self.utils.create_wave(0.00004)
         self.pi.write(config.DIRECTION_PIN, False)
         steps_counter = 0
         while not self.hardware.back_limit.is_pressed:
             if steps_counter > 50 and self.hardware.front_limit.is_pressed:
                 raise Malfunction("Wrong direction")
-
             await asyncio.sleep(0)
             if not self.pi.wave_tx_busy():
                 steps_counter += 1
+                print(steps_counter)
                 self.pi.wave_send_using_mode(backward_wave, pigpio.WAVE_MODE_ONE_SHOT)
 
         await self.utils.move(self.settings.padding_steps, True)
@@ -62,6 +62,7 @@ class Calibrate:
             f"{config.API_URL}settings/machine-thrust/1",
             json.dumps({"max_steps": steps_counter - self.settings.padding_steps * 2}),
         )
+        print('sc', steps_counter)
         self.settings.set_settings(response.json())
 
         self.pi.wave_tx_stop()

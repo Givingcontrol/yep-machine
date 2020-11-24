@@ -20,3 +20,4 @@ RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; els
 
 COPY . /app/
 ENV PYTHONPATH=/
+ENV PYTHONUNBUFFERED=0

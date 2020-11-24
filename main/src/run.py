@@ -31,6 +31,7 @@ class Run:
         self.settings = self.context.settings
 
         self.locking_task = None
+        self.queue = asyncio.Queue()
 
     async def run_handler(self, message):
         message_time = message['time']

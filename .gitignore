@@ -1,3 +1,7 @@
 # Project exclude paths
 /env/
 .idea
+
+arduino/.pio
+arduino/CMakeListsPrivate.txt
+arduino/cmake-build-*/ 

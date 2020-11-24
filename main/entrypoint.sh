@@ -3,4 +3,4 @@
 set -e
 
 cd src
-exec python3 run.py
+python3 -u run.py
