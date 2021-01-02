@@ -1,5 +1,7 @@
 import asyncio
 import json
+from time import sleep
+
 from exceptions import Malfunction
 
 import pigpio
@@ -16,6 +18,7 @@ class Calibrate:
         self.ws = context.ws
         self.utils = context.utils
         self.settings = context.settings
+        self.hardware.enable_limit_monitoring()
 
     async def run(self):
         self.hardware.disable_limit_monitoring()
@@ -34,12 +37,13 @@ class Calibrate:
         self.pi.write(config.DIRECTION_PIN, True)
         while not self.hardware.front_limit.is_pressed:
             if self.hardware.back_limit.is_pressed:
-                raise Malfunction("Wrong direction")
+                raise Malfunction("Back limit pressed while moving forward")
 
             await asyncio.sleep(0)
             if not self.pi.wave_tx_busy():
                 # todo: check why WAVE_MODE_ONE_SHOT_SYNC queues too many waves that keep running
                 self.pi.wave_send_using_mode(forward_wave, pigpio.WAVE_MODE_ONE_SHOT)
+
 
         # todo: count since switch release instead of press, slow moves until release
         # go to the back while counting steps
@@ -47,8 +51,8 @@ class Calibrate:
         self.pi.write(config.DIRECTION_PIN, False)
         steps_counter = 0
         while not self.hardware.back_limit.is_pressed:
-            if steps_counter > 50 and self.hardware.front_limit.is_pressed:
-                raise Malfunction("Wrong direction")
+            if steps_counter > 500 and self.hardware.front_limit.is_pressed:
+                raise Malfunction("Front limit pressed while moving backward")
             await asyncio.sleep(0)
             if not self.pi.wave_tx_busy():
                 steps_counter += 1

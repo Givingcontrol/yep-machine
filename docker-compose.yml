@@ -5,6 +5,7 @@ services:
       context: ./main
     command: /app/entrypoint.sh
     network_mode: "host"
+    privileged: true
   
   redis_proxy:
     build:
