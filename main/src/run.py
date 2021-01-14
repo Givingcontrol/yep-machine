@@ -1,26 +1,18 @@
 import asyncio
 import json
 import time
-
-from commands.calibrate import Calibrate
-from commands.loop_wave import LoopWave
-from commands.stop import Stop
-from exceptions import Malfunction
+import traceback
 
 import pigpio
 import websockets
 
 import config
+from commands.calibrate import Calibrate
+from commands.loop_wave import LoopWave
+from commands.stop import Stop
 from context.context import Context
+from exceptions import Malfunction
 from streams import commands
-
-HANDLERS = {
-    commands.stop: Stop,
-    commands.calibrate: Calibrate,
-    commands.loop_wave: LoopWave,
-}
-
-LOCKING_COMMANDS = (commands.loop_wave, commands.calibrate)
 
 
 class Run:
@@ -33,37 +25,65 @@ class Run:
         self.locking_task = None
         self.queue = asyncio.Queue()
 
+        self.handlers = {
+            "stop": {"class": Stop, "interrupting": True},
+            "calibrate": {"class": Calibrate, "persistent": True},
+            "loop_wave": {"class": LoopWave, "persistent": True},
+            "update_settings": {
+                "function": self.settings.update_settings,
+                # "locking": True
+            },
+        }
+
     async def run_handler(self, message):
-        message_time = message['time']
+        message_time = message["time"]
         print(message_time)
-        print((time.time() - float(message_time)) * 1000, 'ms delay')
+        print((time.time() - float(message_time)) * 1000, "ms delay")
         try:
-            data = message.get("data")
-            handler = HANDLERS[message["type"]](self.context)
-            if data:
-                await handler.run(json.loads(data))
-            else:
-                await handler.run()
+            handler = self.handlers[message["type"]]
+            if handler.get("class"):
+                await self.handle_class(handler, message)
+            elif handler.get("function"):
+                handler.get("function")()
+
         except Malfunction as exception:
             self.hardware.reset(exception)
+        except Exception as e:
+            print(traceback.format_exc())
+
+    async def handle_class(self, handler, message):
+        handler = handler["class"](self.context)
+        data = message.get("data")
+        if data:
+            await handler.run(json.loads(data))
+        else:
+            await handler.run()
 
     async def loop(self):
-        async with websockets.connect(
-                config.WS_URL + commands.command_all, ping_interval=5
-        ) as websocket:
-            self.context.ws = websocket
-            while True:
-                messages = await websocket.recv()
+        self.context.ws = await websockets.connect(
+            config.WS_URL + commands.command_all, ping_interval=5
+        )
+        while True:
+            try:
+                messages = await self.context.ws.recv()
+            except websockets.ConnectionClosedError:
+                print("Connection closed, waiting")
+                await asyncio.sleep(1)
+                self.context.ws = await websockets.connect(
+                    config.WS_URL + commands.command_all, ping_interval=5
+                )
+            else:
                 messages = json.loads(messages)
                 for message in messages:
-                    message_type = message["type"]
-                    print(message_type)
-                    if message_type == "stop" and self.locking_task:
+                    print("Command ", message["type"])
+                    handler = self.handlers[message["type"]]
+                    if handler.get("interrupting") and self.locking_task:
                         self.locking_task.cancel()
 
+                    self.hardware.reset("cleanup")
                     task = asyncio.create_task(self.run_handler(message))
 
-                    if message_type in LOCKING_COMMANDS:
+                    if handler.get("persistent"):
                         if self.locking_task:
                             self.locking_task.cancel()
                         self.locking_task = task

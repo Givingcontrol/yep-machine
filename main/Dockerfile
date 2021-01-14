@@ -1,9 +1,9 @@
-FROM python:3.7-alpine
+FROM python:3.7-slim-buster
+ENV http_proxy http://10.0.0.7:8866
+ENV https_proxy http://10.0.0.7:8866
 
-RUN apk add curl
-RUN apk add --no-cache bash
-RUN apk add build-base
-
+RUN apt-get update
+RUN apt-get install -y build-essential curl python3-smbus 
 WORKDIR /app/
 
 # Install Poetry

@@ -1,8 +1,10 @@
 import asyncio
+import time
 
 import pigpio
 
 import config
+from i2c.arduino import device
 
 
 class RunMoves:
@@ -55,23 +57,60 @@ class RunMoves:
         self.pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
         self.pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
 
-        ticker = tick_response(data)
+        print(data)
 
-        for reverse, moves in ticker:
-            # todo: implement configurable reverse to front mapping
-            self.pi.write(config.DIRECTION_PIN, not reverse)
-            # todo: raise exception instead of silently correcting movement value with max
-            # todo: save decimal point of the step and add it when it exceeds 0.5 -
-            # - to minimize backwards-forwards compensation needed
-            steps = [
-                int(min(abs(move), 1) * self.settings.max_steps / 2) for move in moves
-            ]
-            await self._generate_ramp(steps)
+        # ticker = tick_response(data)
+        positions_len = len(data)
+        current_position = 0
+        current_index = 0
+        start_time = time.time()
 
-            self.hardware.log_steps(abs(sum(steps)), reverse)
+        while not self.pi.wave_tx_busy():
+            desired_position = data[current_index]
+            forward = desired_position > current_position
+            self.pi.write(config.DIRECTION_PIN, forward)
 
-            self.pi.wave_tx_stop()  # stop waveform
-            self.pi.wave_clear()
+            diff = abs(desired_position - current_position)
+            steps = int(diff * self.settings.max_steps)
+            force = device.read_num()
+
+            if diff > 0:
+                if force[0] > 100:
+                    steps = 1  # todo: handling of moving 0 steps - pure wait (and timing sync by the way)
+                else:
+                    current_position = desired_position
+                self.pi.wave_clear()
+                wave_id = self.utils.create_wave_pad(
+                    1 / (steps * self.settings.wave_resolution)
+                )
+
+                # generate number of steps per frequency
+                steps_number_below_256 = steps & 255
+                steps_number_times_256 = steps >> 8
+
+                chain = [
+                    255,
+                    0,
+                    wave_id,
+                    255,
+                    1,
+                    steps_number_below_256,
+                    steps_number_times_256,
+                ]
+
+                self.pi.wave_chain(chain)  # Transmit chain.
+
+                while self.pi.wave_tx_busy():  # While transmitting.
+                    await asyncio.sleep(0.01)
+
+                # delete all waves
+                self.pi.wave_delete(0)
+
+            current_index += 1
+            if current_index == positions_len:
+                current_index = 0
+                print("Wave time: " + str(time.time() - start_time))
+                start_time = time.time()
 
 
 def tick_response(data):

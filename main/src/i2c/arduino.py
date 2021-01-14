@@ -1,6 +1,7 @@
-import smbus
 import struct
 import time
+
+import smbus
 
 
 class Arduino:
@@ -29,15 +30,14 @@ class Arduino:
         time.sleep(0.0001)
 
     def test_read8(self):
-        self.read_unpack(0, 8, 'cccccccc')
+        self.read_unpack(0, 8, "cccccccc")
 
     def test_write8(self):
         self.bus.write_i2c_block_data(20, 0, [0, 0, 0, 0, 0, 0, 0, 0])
         time.sleep(0.0001)
 
     def read_num(self):
-        x = self.read_unpack(0, 4, "f")
-        print(x)
+        return self.read_unpack(0, 4, "f")
 
 
 device = Arduino()

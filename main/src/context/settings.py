@@ -27,5 +27,5 @@ class Settings:
                 setattr(self, key, data[key])
 
     def update_settings(self):
-        data = requests.get(f"{config.API_URL}settings/machine-thrust/1").json()
+        data = requests.get(f"{config.API_URL}settings/machine-thrust/default/").json()
         self.set_settings(data)

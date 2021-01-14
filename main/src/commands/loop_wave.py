@@ -1,6 +1,6 @@
 import json
-from exceptions import Malfunction
 
+from exceptions import Malfunction
 from streams import status
 
 
@@ -21,6 +21,4 @@ class LoopWave:
         if self.hardware.limit_pressed:
             raise Malfunction("Limit switch pressed at the start of loop_wave")
 
-        while True:
-            await self.utils.run_moves(data)
-            await self.utils.compensate_for_steps()
+        await self.utils.run_moves(data)

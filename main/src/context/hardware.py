@@ -18,9 +18,6 @@ class Hardware:
 
         self.position = None
 
-        self.forward_steps = 0
-        self.reverse_steps = 0
-
         self.enable_limit_monitoring()
 
     @property
@@ -32,8 +29,6 @@ class Hardware:
         self.pi.set_mode(config.PULSE_PIN, pigpio.INPUT)
         self.pi.wave_tx_stop()
         self.pi.wave_clear()
-        self.reverse_steps = 0
-        self.forward_steps = 0
 
     def enable_limit_monitoring(self):
         self.front_limit.when_pressed = lambda: self.reset("Front limit switch pressed")
@@ -49,9 +44,3 @@ class Hardware:
 
     def setup_limit_buttons(self):
         pass
-
-    def log_steps(self, steps, reverse):
-        if reverse:
-            self.reverse_steps += steps
-        else:
-            self.forward_steps += steps

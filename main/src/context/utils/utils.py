@@ -21,6 +21,15 @@ class Utils(RunMoves):
         self.pi.wave_add_generic(wave)
         return self.pi.wave_create()
 
+    def create_wave_pad(self, period):
+        period = int(period * 1000000)  # convert s to ns
+        wave = [
+            pigpio.pulse(1 << config.PULSE_PIN, 0, period),
+            pigpio.pulse(0, 1 << config.PULSE_PIN, period),
+        ]
+        self.pi.wave_add_generic(wave)
+        return self.pi.wave_create_and_pad(50)
+
     async def move(self, steps, reverse):
         self.pi.write(config.DIRECTION_PIN, reverse)
 
@@ -48,12 +57,3 @@ class Utils(RunMoves):
 
         # delete all waves
         self.pi.wave_delete(0)
-
-    async def compensate_for_steps(self):
-        steps = abs(self.hardware.forward_steps - self.hardware.reverse_steps)
-        print(f"Compensating for {steps} steps")
-        await self.utils.move(
-            steps, self.hardware.reverse_steps > self.hardware.forward_steps
-        )
-        self.hardware.reverse_steps = 0
-        self.hardware.forward_steps = 0

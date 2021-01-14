@@ -6,7 +6,9 @@ services:
     command: /app/entrypoint.sh
     network_mode: "host"
     privileged: true
-  
+    devices:
+      - "/dev/i2c-1:/dev/i2c-1"
+
   redis_proxy:
     build:
       context: ./redis_proxy
