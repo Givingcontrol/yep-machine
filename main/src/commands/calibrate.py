@@ -53,18 +53,17 @@ class Calibrate:
             await asyncio.sleep(0)
             if not self.pi.wave_tx_busy():
                 steps_counter += 1
-                print(steps_counter)
                 self.pi.wave_send_using_mode(backward_wave, pigpio.WAVE_MODE_ONE_SHOT)
-
-        await self.utils.move(self.settings.padding_steps, True)
+        print('steps: ', steps_counter)
+        padding_steps = int(
+            self.settings.padding_mm * (steps_counter / self.settings.max_stroke)
+        )
+        self.settings.padding_steps = padding_steps
+        print("Padding steps", padding_steps)
+        await self.utils.move(padding_steps, True)
 
         self.hardware.position = 0
-        response = requests.put(
-            f"{config.API_URL}settings/machine-thrust/default/",
-            json.dumps({"max_steps": steps_counter - self.settings.padding_steps * 2}),
-        )
-        print("sc", steps_counter)
-        self.settings.set_settings(response.json())
+        self.settings.update_settings({"max_steps": steps_counter - padding_steps * 2})
 
         self.pi.wave_tx_stop()
         self.pi.wave_clear()

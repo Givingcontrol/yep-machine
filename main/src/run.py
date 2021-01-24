@@ -37,7 +37,6 @@ class Run:
 
     async def run_handler(self, message):
         message_time = message["time"]
-        print(message_time)
         print((time.time() - float(message_time)) * 1000, "ms delay")
         try:
             handler = self.handlers[message["type"]]

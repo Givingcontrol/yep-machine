@@ -57,8 +57,6 @@ class RunMoves:
         self.pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
         self.pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
 
-        print(data)
-
         # ticker = tick_response(data)
         positions_len = len(data)
         current_position = 0
@@ -73,13 +71,16 @@ class RunMoves:
             diff = abs(desired_position - current_position)
             steps = int(diff * self.settings.max_steps)
             force = device.read_num()
-
+            print('steps', steps)
             if diff > 0:
                 if force[0] > 100:
-                    steps = 1  # todo: handling of moving 0 steps - pure wait (and timing sync by the way)
+                    steps = 1  # todo: handling of moving 0 steps - pure wait instead of moving (and timing sync by the way)
                 else:
                     current_position = desired_position
                 self.pi.wave_clear()
+                if steps == 0:
+                    steps = 1  # todo: wait instead of moving
+
                 wave_id = self.utils.create_wave_pad(
                     1 / (steps * self.settings.wave_resolution)
                 )
