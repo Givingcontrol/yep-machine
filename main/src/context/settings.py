@@ -11,6 +11,8 @@ ALLOWED_KEYS = (
     "max_stroke",
     "microsteps_per_rev",
     "padding_mm",
+    "steps_per_mm",
+    "tick_stroke_limit"
 )
 
 
@@ -21,8 +23,11 @@ class Settings:
         self.max_steps = None
         self.max_stroke = None
         self.microsteps_per_rev = None
+        self.steps_per_mm = None
+        self.tick_stroke_limit = None
 
         self.padding_steps = None
+        self.stroke_force_chart = None
 
     def update_settings(self, data=None):
         if data:
@@ -38,3 +43,7 @@ class Settings:
         for key in ALLOWED_KEYS:
             if key in data:
                 setattr(self, key, data[key])
+
+        self.stroke_force_chart = requests.post(
+            f"{config.API_URL}curve/", json.dumps({"data": data['stroke_force_chart']})
+        ).json()
