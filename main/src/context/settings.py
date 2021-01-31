@@ -12,7 +12,7 @@ ALLOWED_KEYS = (
     "microsteps_per_rev",
     "padding_mm",
     "steps_per_mm",
-    "tick_stroke_limit"
+    "tick_stroke_limit",
 )
 
 
@@ -29,10 +29,13 @@ class Settings:
         self.padding_steps = None
         self.stroke_force_chart = None
 
+        self.update_settings()
+
     def update_settings(self, data=None):
         if data:
             response = requests.put(
-                f"{config.API_URL}settings/machine-thrust/default/", json.dumps(data)
+                f"{config.API_URL}settings/machine-thrust/default/?machine=true",
+                json.dumps(data),
             )
             data = response.json()
         else:
@@ -45,5 +48,5 @@ class Settings:
                 setattr(self, key, data[key])
 
         self.stroke_force_chart = requests.post(
-            f"{config.API_URL}curve/", json.dumps({"data": data['stroke_force_chart']})
+            f"{config.API_URL}curve/", json.dumps({"data": data["stroke_force_chart"]})
         ).json()

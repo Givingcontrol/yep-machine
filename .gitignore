@@ -5,3 +5,5 @@
 arduino/.pio
 arduino/CMakeListsPrivate.txt
 arduino/cmake-build-*/ 
+
+poetry.lock

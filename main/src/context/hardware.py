@@ -17,6 +17,8 @@ class Hardware:
         self.back_limit = Button(20)
 
         self.position = None
+        self.end = False
+        self.post_end = []
 
         self.enable_limit_monitoring()
 

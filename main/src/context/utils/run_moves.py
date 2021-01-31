@@ -57,21 +57,22 @@ class RunMoves:
         self.pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
         self.pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
 
+        self.hardware.end = False  # may cause bugs
+
         # ticker = tick_response(data)
         positions_len = len(data)
-        current_position = 0
         current_index = 0
         start_time = time.time()
 
         while not self.pi.wave_tx_busy():
             desired_position = data[current_index] * self.settings.max_steps
-            forward = desired_position > current_position
+            forward = desired_position > self.hardware.position
             self.pi.write(config.DIRECTION_PIN, forward)
-            steps = int(abs(desired_position - current_position))
+            steps = int(abs(desired_position - self.hardware.position))
             # print('s', steps)
 
             force = device.read_num()[0]
-            force = -force if forward else force  # initial force value is inverted 
+            force = -force if forward else force  # initial force value is inverted
             if force < 0:
                 force = 0
 
@@ -79,18 +80,24 @@ class RunMoves:
 
             if steps > 0:
                 # old_steps = steps
-                steps_limit_percentage = self.settings.stroke_force_chart[int(min(force, 999))]
+                steps_limit_percentage = self.settings.stroke_force_chart[
+                    int(min(force, 999))
+                ]
                 steps_limit = int(
-                    steps_limit_percentage / 100 * self.settings.tick_stroke_limit * self.settings.steps_per_mm)
+                    steps_limit_percentage
+                    / 100
+                    * self.settings.tick_stroke_limit
+                    * self.settings.steps_per_mm
+                )
                 steps = min(steps, steps_limit)
                 # print('steps', old_steps, steps, 'force', force, 'limit', steps_limit)
 
                 if steps == 0:
                     steps = 1  # todo: wait instead of moving
                 if forward:
-                    current_position += steps
+                    self.hardware.position += steps
                 else:
-                    current_position -= steps
+                    self.hardware.position -= steps
 
                 self.pi.wave_clear()
                 wave_id = self.utils.create_wave_pad(
@@ -121,9 +128,12 @@ class RunMoves:
 
             current_index += 1
             if current_index == positions_len:
-                current_index = 0
-                print("Wave time: " + str(time.time() - start_time))
-                start_time = time.time()
+                if self.hardware.end:
+                    break
+                else:
+                    current_index = 0
+                    print("Wave time: " + str(time.time() - start_time))
+                    start_time = time.time()
 
 
 def tick_response(data):
@@ -145,7 +155,7 @@ def tick_response(data):
             batch.append(point)
             batch_counter += 1
             if (
-                    batch_counter == 19
+                batch_counter == 19
             ):  # pigpio doesn't accept more than 20 waves per chain
                 yield point_reverse, batch
                 batch = []

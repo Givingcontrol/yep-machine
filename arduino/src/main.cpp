@@ -29,11 +29,14 @@ void setup()
 
 void loop()
 {
+  // todo: handle commands like send_data and calibrate (set calibration factor automatically)
+
   // Call updateBuffer() before using the buffer, to get the latest
   // data including recent master writes.
   slave.updateBuffer();
 
   slave.buffer.num = scale.get_units();
+  //  Serial.println(scale.get_units(), 1);
   // When you are done WRITING, call finalizeWrites() to make modified
   // data available to I2C master.
   slave.finalizeWrites();

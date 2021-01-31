@@ -57,4 +57,3 @@ class Utils(RunMoves):
 
         # delete all waves
         self.pi.wave_delete(0)
-    

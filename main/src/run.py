@@ -8,11 +8,16 @@ import websockets
 
 import config
 from commands.calibrate import Calibrate
+from commands.end import End
 from commands.loop_wave import LoopWave
 from commands.stop import Stop
+from commands.update_settings import UpdateSettings
 from context.context import Context
 from exceptions import Malfunction
 from streams import commands
+
+# ordered from highest to lowest priority
+QUEUED_COMMANDS = ["update_settings", "calibrate", "loop_wave"]
 
 
 class Run:
@@ -26,14 +31,13 @@ class Run:
         self.queue = asyncio.Queue()
 
         self.handlers = {
-            "stop": {"class": Stop, "interrupting": True},
+            "stop": {"class": Stop},
+            "end": {"class": End},
             "calibrate": {"class": Calibrate, "persistent": True},
             "loop_wave": {"class": LoopWave, "persistent": True},
-            "update_settings": {
-                "function": self.settings.update_settings,
-                # "locking": True
-            },
+            "update_settings": {"class": UpdateSettings, "persistent": True},
         }
+        self.tasks_queue = {key: None for key in QUEUED_COMMANDS}
 
     async def run_handler(self, message):
         message_time = message["time"]
@@ -57,11 +61,14 @@ class Run:
             await handler.run(json.loads(data))
         else:
             await handler.run()
+        self.locking_task = None
+        await self.run_queue()
 
     async def loop(self):
         self.context.ws = await websockets.connect(
             config.WS_URL + commands.command_all, ping_interval=5
         )
+
         while True:
             try:
                 messages = await self.context.ws.recv()
@@ -74,20 +81,35 @@ class Run:
             else:
                 messages = json.loads(messages)
                 for message in messages:
-                    print("Command ", message["type"])
-                    handler = self.handlers[message["type"]]
-                    if handler.get("interrupting") and self.locking_task:
+                    command = message["type"]
+                    print("Command ", command)
+
+                    if message["type"] == "stop" and self.locking_task:
                         self.locking_task.cancel()
+                        self.locking_task = None
+                        self.hardware.reset("STOP command")
 
-                    self.hardware.reset("cleanup")
+                    if command in QUEUED_COMMANDS:
+                        self.hardware.end = True
+                        self.tasks_queue[command] = message
+                        # clear lower priority tasks to allow them to run only from highest to lowest priority
+                        command_index = QUEUED_COMMANDS.index(command)
+                        for index, item in enumerate(QUEUED_COMMANDS):
+                            if index > command_index:
+                                self.tasks_queue[item] = None
+                    else:
+                        asyncio.create_task(self.run_handler(message))
+            await self.run_queue()
+
+    async def run_queue(self):
+        if not self.locking_task:
+            for key in QUEUED_COMMANDS:
+                message = self.tasks_queue.get(key)
+                if message:
+                    self.tasks_queue[key] = None
                     task = asyncio.create_task(self.run_handler(message))
-
-                    if handler.get("persistent"):
-                        if self.locking_task:
-                            self.locking_task.cancel()
-                        self.locking_task = task
-                        self.pi.set_mode(config.PULSE_PIN, pigpio.OUTPUT)
-                        self.pi.set_mode(config.DIRECTION_PIN, pigpio.OUTPUT)
+                    self.locking_task = task
+                    break
 
 
 runner = Run()

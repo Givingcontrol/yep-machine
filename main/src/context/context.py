@@ -9,5 +9,3 @@ class Context:
         self.pi = self.hardware.pi
         self.settings = Settings()
         self.utils = Utils(self.hardware, self.settings)
-
-        self.settings.update_settings()

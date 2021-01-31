@@ -54,7 +54,7 @@ class Calibrate:
             if not self.pi.wave_tx_busy():
                 steps_counter += 1
                 self.pi.wave_send_using_mode(backward_wave, pigpio.WAVE_MODE_ONE_SHOT)
-        print('steps: ', steps_counter)
+        print("steps: ", steps_counter)
         padding_steps = int(
             self.settings.padding_mm * (steps_counter / self.settings.max_stroke)
         )

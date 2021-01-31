@@ -1,4 +1,4 @@
-SERVER_URL = "10.0.0.7"
+SERVER_URL = "10.0.0.5"
 API_URL = f"http://{SERVER_URL}/api/"
 WS_URL = f"ws://{SERVER_URL}/api/stream/"
 
