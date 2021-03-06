@@ -13,6 +13,7 @@ ALLOWED_KEYS = (
     "padding_mm",
     "steps_per_mm",
     "tick_stroke_limit",
+    "force_limit"
 )
 
 
@@ -25,6 +26,7 @@ class Settings:
         self.microsteps_per_rev = None
         self.steps_per_mm = None
         self.tick_stroke_limit = None
+        self.force_limit = None
 
         self.padding_steps = None
         self.stroke_force_chart = None
@@ -48,5 +50,5 @@ class Settings:
                 setattr(self, key, data[key])
 
         self.stroke_force_chart = requests.post(
-            f"{config.API_URL}curve/", json.dumps({"data": data["stroke_force_chart"]})
+            f"{config.API_URL}curve/", json.dumps({"points": data["stroke_force_chart"], "resolution": self.force_limit})
         ).json()
