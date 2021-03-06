@@ -72,6 +72,7 @@ class RunMoves:
             # print('s', steps)
 
             force = device.read_num()[0]
+            # measure force only against the current direction
             force = -force if forward else force  # initial force value is inverted
             if force < 0:
                 force = 0
@@ -80,8 +81,9 @@ class RunMoves:
 
             if steps > 0:
                 # old_steps = steps
+                force_fraction = force / self.settings.force_limit
                 steps_limit_percentage = self.settings.stroke_force_chart[
-                    int(min(force, 999))
+                    int(min(force_fraction * 1000, 999))
                 ]
                 steps_limit = int(
                     steps_limit_percentage

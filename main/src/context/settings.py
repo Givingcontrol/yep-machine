@@ -50,5 +50,5 @@ class Settings:
                 setattr(self, key, data[key])
 
         self.stroke_force_chart = requests.post(
-            f"{config.API_URL}curve/", json.dumps({"points": data["stroke_force_chart"], "resolution": self.force_limit})
+            f"{config.API_URL}curve/", json.dumps({"points": data["stroke_force_chart"], "resolution": 1000})
         ).json()
